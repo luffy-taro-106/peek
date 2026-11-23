@@ -120,6 +120,15 @@ final class NotchWindowController {
                                                object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.reposition() }
         }
+        // Move right away when the "Show on" setting changes.
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
+                                               object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, Self.displayMode != self.lastMode else { return }
+                self.lastMode = Self.displayMode
+                self.reposition()
+            }
+        }
         // Mouse-move events give instant response; a slow timer covers the
         // cases with no movement (the notch changing size under the pointer).
         let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
@@ -135,21 +144,51 @@ final class NotchWindowController {
         }
     }
 
+    /// Which display the notch lives on (Settings › General › Show on):
+    /// "main" = the display with the menu bar (default), "builtin" = the
+    /// laptop's notched screen, "mouse" = whichever display the pointer is on.
+    static var displayMode: String { UserDefaults.standard.string(forKey: "notchScreen") ?? "main" }
+
+    /// The display chosen by the current mode.
     var screen: NSScreen {
-        NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens[0]
+        let all = NSScreen.screens
+        guard let primary = all.first ?? NSScreen.main else { return NSScreen.main! }
+        switch Self.displayMode {
+        case "builtin":
+            return all.first { $0.safeAreaInsets.top > 0 } ?? all.first { Self.isBuiltIn($0) } ?? primary
+        case "mouse":
+            let m = NSEvent.mouseLocation
+            return all.first { NSMouseInRect(m, $0.frame, false) } ?? primary
+        default:
+            // NSScreen.screens[0] is always the display that has the menu bar
+            // (the one marked as main in System Settings › Displays).
+            return primary
+        }
     }
+
+    private static func isBuiltIn(_ s: NSScreen) -> Bool {
+        guard let id = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return false }
+        return CGDisplayIsBuiltin(id) != 0
+    }
+
+    /// Frame of the display the panel is on right now (hit-testing uses this,
+    /// so "follow the pointer" doesn't chase the mouse mid-hover).
+    private var activeFrame: NSRect = .zero
+    private var lastMode = NotchWindowController.displayMode
 
     func reposition() {
         let s = screen
         let f = s.frame
+        activeFrame = f
         if s.safeAreaInsets.top > 0,
            let left = s.auxiliaryTopLeftArea, let right = s.auxiliaryTopRightArea {
             let w = f.width - left.width - right.width
             state.notchSize = CGSize(width: max(w, 120), height: s.safeAreaInsets.top)
             state.hasHardwareNotch = true
         } else {
+            // No notch here (external display): draw one as tall as the menu bar.
             let menuBar = f.maxY - s.visibleFrame.maxY
-            state.notchSize = CGSize(width: 190, height: max(menuBar, 24))
+            state.notchSize = CGSize(width: 190, height: max(menuBar, NSStatusBar.system.thickness, 24))
             state.hasHardwareNotch = false
         }
         let origin = NSPoint(x: f.midX - canvas.width / 2, y: f.maxY - canvas.height)
@@ -158,7 +197,7 @@ final class NotchWindowController {
 
     /// The visible shape in screen coordinates (plus a little slack for hover).
     private func hotRect(slack: CGFloat) -> NSRect {
-        let f = screen.frame
+        let f = activeFrame
         let size = state.visibleSize
         return NSRect(x: f.midX - size.width / 2 - slack,
                       y: f.maxY - size.height - slack,
@@ -168,6 +207,12 @@ final class NotchWindowController {
 
     private func track() {
         let mouse = NSEvent.mouseLocation
+        // Follow-the-pointer mode: hop to the display the pointer moved to
+        // (only while closed, so an open notch never jumps away).
+        if Self.displayMode == "mouse", !state.expanded, !NSMouseInRect(mouse, activeFrame, false),
+           NSScreen.screens.contains(where: { NSMouseInRect(mouse, $0.frame, false) }) {
+            reposition()
+        }
         let inside = hotRect(slack: state.expanded ? 4 : 1).contains(mouse)
         if panel.ignoresMouseEvents == inside { panel.ignoresMouseEvents = !inside }
 

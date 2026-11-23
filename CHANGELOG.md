@@ -4,6 +4,11 @@ All notable changes to Peek are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **Show on** setting: put the notch on the main display (new default), the built-in screen, or the display with the pointer — for setups with an external monitor.
+
+### Fixed
+- Launching Peek while another copy is running now replaces the old copy instead of running two notches and two servers.
 
 ## [1.0.0] — 2026-11-23
 ### Added

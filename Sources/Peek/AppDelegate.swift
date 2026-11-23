@@ -21,6 +21,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bag: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Only one Peek at a time: a newly launched copy (e.g. after an update)
+        // replaces any older one, so there's never two notches or two servers.
+        let me = NSRunningApplication.current
+        for other in NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "dev.peek.notch")
+        where other.processIdentifier != me.processIdentifier {
+            other.terminate()
+            let pid = other.processIdentifier
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { if kill(pid, 0) == 0 { kill(pid, SIGKILL) } }
+        }
         UserDefaults.standard.register(defaults: [
             "hoverToExpand": true, "autoExpandOnApproval": true, "approvalSound": true,
             "weatherUnit": Locale.current.measurementSystem == .us ? "f" : "c",
@@ -30,6 +39,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Local hook server.
         server.onStateChange = { [weak self] msg in Task { @MainActor in self?.hub.serverStatus = msg } }
         server.onRequest = { [hub] req, responder in hub.handle(req, responder) }
+        // Give a replaced copy a moment to free the port.
+        if NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "").count > 1 {
+            Thread.sleep(forTimeInterval: 0.8)
+        }
         server.start()
 
         // Keep the hook script current if the hooks are installed.
@@ -58,6 +71,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hub.extraState = { [weak self] in
             guard let self else { return [:] }
             return [
+                "notch": ["display": self.notch?.panel.screen?.localizedName as Any,
+                          "mode": NotchWindowController.displayMode,
+                          "displays": NSScreen.screens.map { $0.localizedName }],
                 "weather": ["temp": self.weather.now?.temperature as Any, "place": self.weather.place,
                             "status": self.weather.status as Any, "locationAuth": self.weather.authorization.rawValue],
                 "calendar": ["calendarStatus": self.calendar.calendarStatus.rawValue, "remindersStatus": self.calendar.remindersStatus.rawValue,

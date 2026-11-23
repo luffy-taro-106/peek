@@ -57,7 +57,7 @@ A charging animation when you plug in or unplug, low-battery alerts, and a banne
 </p>
 
 ### ✨ Feels native
-Hover to open, move away to close. Click the pin to keep it open, or press <kbd>⌃</kbd><kbd>⌥</kbd><kbd>N</kbd> from anywhere. Lives in the menu bar, launches at login if you want, and works on Macs without a notch too (it draws one).
+Hover to open, move away to close. Click the pin to keep it open, or press <kbd>⌃</kbd><kbd>⌥</kbd><kbd>N</kbd> from anywhere. Lives in the menu bar and launches at login if you want. Using an external monitor? Choose where the notch appears in *Settings › General › Show on* — the main display (default), the built-in screen, or whichever display your pointer is on. Screens without a notch get one drawn at the top center.
 
 ---
 

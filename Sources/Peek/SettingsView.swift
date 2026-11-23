@@ -17,11 +17,19 @@ struct SettingsView: View {
 
 struct GeneralSettings: View {
     @AppStorage("hoverToExpand") private var hover = true
+    @AppStorage("notchScreen") private var notchScreen = "main"
     @StateObject private var loginItemBox = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErrorBox = Box<String?>(nil)
     var body: some View {
         Form {
             Section("Notch") {
+                Picker("Show on", selection: $notchScreen) {
+                    Text("Main display (with the menu bar)").tag("main")
+                    Text("Built-in display").tag("builtin")
+                    Text("Display with the pointer").tag("mouse")
+                }
+                Text("On a display without a notch, Peek draws one at the top center.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Open the notch when the pointer rests on it", isOn: $hover)
                 LabeledContent("Toggle the notch", value: "⌃⌥N")
                 Text("Click the notch to keep it open. Click the pin to let it close when the pointer leaves.")
