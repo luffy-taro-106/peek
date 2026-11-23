@@ -21,6 +21,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(cat VERSION)"
+          # Re-running for a tag that already has a release just replaces the zip.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "build/Peek-$VERSION.zip" --clobber
+            exit 0
+          fi
           gh release create "$GITHUB_REF_NAME" "build/Peek-$VERSION.zip" \
             --title "Peek $GITHUB_REF_NAME" \
             --notes "See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md) for what's new. This build isn't notarized: the first time, right-click Peek.app → Open."
