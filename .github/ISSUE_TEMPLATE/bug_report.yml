@@ -1,0 +1,37 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the notch
+        2. Go to the Claude tab
+        3. ...
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac model
+      placeholder: macOS 15.2, MacBook Air M3
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Peek version
+      description: Shown in Finder › Get Info, or the commit you built from.
+  - type: textarea
+    id: state
+    attributes:
+      label: Debug state (optional)
+      description: Output of `curl -s http://127.0.0.1:8799/state`. Redact private titles first.
+      render: json

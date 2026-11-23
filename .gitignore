@@ -1,0 +1,17 @@
+# Build output
+.build/
+build/
+*.dylib
+*.zip
+
+# Editors / OS
+.DS_Store
+.swiftpm/
+*.xcodeproj/
+xcuserdata/
+.vscode/
+.idea/
+
+# Local signing material (never commit keys)
+*.p12
+*.pem

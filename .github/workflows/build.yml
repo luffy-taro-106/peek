@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build Peek.app
+        run: ./build.sh
+      - name: Check the bundle
+        run: |
+          test -x build/Peek.app/Contents/MacOS/Peek
+          test -f build/Peek.app/Contents/Resources/PeekMediaRemote.dylib
+          test -f build/Peek.app/Contents/Resources/AppIcon.icns
+          plutil -lint build/Peek.app/Contents/Info.plist
+          bash -n scripts/create-signing-cert.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Peek.app
+          path: build/Peek.app
